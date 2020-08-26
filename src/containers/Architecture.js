@@ -6,7 +6,8 @@ import "./Architecture.css";
 
 export default function Architecture() {
 
-  const URL = "https://demo-object-detection-app.s3.amazonaws.com/architecture3.png";
+  // const URL = "https://demo-object-detection-app.s3.amazonaws.com/architecture3.png";
+  const URL = "https://github.com/molly-moon/app-object-detection/raw/master/architecture.png";
   
   const MAP = {
     name: "my-map",
