@@ -409,10 +409,12 @@ Resources:
               #!/bin/bash
               sudo yum update -y
 
-              # Download Lambda handler
-              wget https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/lambda_handler/inference.py
-              zip inference.zip inference.py
-              aws s3 cp inference.zip s3://${HostingBucket}
+              # Donwload the repo
+              curl -L -o repo.zip https://github.com/molly-moon/app-object-detection/zipball/master
+              unzip repo.zip 
+            
+              # Upload Lambda handler to S3
+              aws s3 cp molly-moon*/lambda_handler/inference.zip s3://${HostingBucket}
 
               # Mount file system
               sudo mkdir -p /mnt/efs/fs1
@@ -430,19 +432,21 @@ Resources:
               cd Python-3.6.8
               sudo ./configure --enable-optimizations
               sudo make install
+              cd ~
               
-              # Download and install Lambda dependencies
+              # Lambda dependencies setup
               sudo mkdir /mnt/efs/fs1/ml
               sudo chown ec2-user:ec2-user /mnt/efs/fs1/ml
               wget -P /mnt/efs/fs1/ml/model_data https://tutorial-upload.s3.amazonaws.com/yolov2.h5
-              wget -P /mnt/efs/fs1/ml/model_data https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/model/coco_classes.txt
-              wget -P /mnt/efs/fs1/ml/model_data https://github.com/molly-moon/projects/raw/master/app-object-detection/web-app/model/FiraMono-Medium.otf
-              wget -P /mnt/efs/fs1/ml/model_data https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/model/yolo_anchors.txt
+              cp molly*/model/* /mnt/efs/fs1/ml/model_data
               python3 -m pip install -t /mnt/efs/fs1/ml/lib keras==2.0 imageio
               
-              # Update config file
-              find build -type f -exec sed -i 's/REPLACE_REGION/${AWS::Region}/g' {} \;
-              find build -type f -exec sed -i 's/REPLACE_APIID/${InferenceApi}/g' {} \;
+              # Update env variables
+              find molly*/build/static/js -type f -exec sed -i 's/REPLACE_REGION/${AWS::Region}/g' {} \;
+              find molly*/build/static/js -type f -exec sed -i 's/REPLACE_APIID/${InferenceApi}/g' {} \;
+
+              # Upload website files to S3
+              aws s3 sync molly*/build s3://${HostingBucket}
 
               # Send signal to CloudFormation
               /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
