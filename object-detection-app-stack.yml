@@ -1,0 +1,558 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Serverless Application that detects objects on input images.
+
+Parameters:
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+
+  PublicSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet 
+    Type: String
+    Default: 10.192.10.0/20
+
+  PrivateSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet
+    Type: String
+    Default: 10.192.20.0/20
+  
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.large
+    AllowedValues: [t2.large, t2.xlarge, t2.2xlarge,
+      t3.large, t3.xlarge, t3.2xlarge,
+      m4.large, m4.xlarge, m4.2xlarge, m4.4xlarge, m4.10xlarge,
+      m5.large, m5.xlarge, m5.2xlarge, m5.4xlarge,
+      c5.large, c5.xlarge, c5.2xlarge, c5.4xlarge, c5.9xlarge,
+      g3.8xlarge,
+      r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r3.12xlarge,
+      i3.xlarge, i3.2xlarge, i3.4xlarge, i3.8xlarge,
+      d2.xlarge, d2.2xlarge, d2.4xlarge, d2.8xlarge]
+    ConstraintDescription: Must be a sufficiently large EC2 instance.
+
+  LatestAmiId:
+    Type:  'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    
+Resources:
+
+# VPC environment 
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [2, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Subnet
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [3, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Subnet
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Routes
+
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet
+  
+# Elastic File System
+
+  FileSystemResource:
+    Type: AWS::EFS::FileSystem
+    Properties: 
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+  
+  MountTargetPublic:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystemResource
+      SubnetId: !Ref PublicSubnet
+      SecurityGroups:
+      - !GetAtt VPC.DefaultSecurityGroup
+  
+  MountTargetPrivate:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystemResource
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroups:
+      - !GetAtt VPC.DefaultSecurityGroup
+
+  AccessPointResource:
+      Type: AWS::EFS::AccessPoint
+      Properties:
+        FileSystemId: !Ref FileSystemResource
+        PosixUser:
+          Uid: 1001
+          Gid: 1001
+        RootDirectory:
+          CreationInfo:
+            OwnerGid: 1001
+            OwnerUid: 1001
+            Permissions: 750
+          Path: /ml
+
+
+# S3 bucket for static website hosting
+
+  HostingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      AccessControl: PublicRead
+      BucketName:  !Join
+        - "-"
+        - - "object-detection-app"
+          - !Select
+            - 0
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - "/"
+                  - !Ref AWS::StackId
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      CorsConfiguration:
+        CorsRules:
+          -
+            AllowedOrigins:
+              - '*'
+            AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            MaxAge: 3000
+
+# API Gateway 
+
+  InferenceApi :
+      Type: AWS::ApiGateway::RestApi
+      Description: API used for ML inference
+      Properties:
+        Name: !Ref AWS::StackName
+        EndpointConfiguration:
+          Types:
+            - REGIONAL
+
+  RoleForApiGatewayCloudWatchLogs:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: ApiGatewayLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                  - logs:GetLogEvents
+                  - logs:FilterLogEvents
+                Resource: "*"
+
+  ApiGatewayAccount:
+    DependsOn: 
+      - RoleForApiGatewayCloudWatchLogs
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt RoleForApiGatewayCloudWatchLogs.Arn
+
+  LambdaPermissionForApiGateway:
+    DependsOn: 
+      - InferenceApi
+      - InferenceFunction
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !Ref InferenceFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${InferenceApi}/*/*/*'
+
+  InferenceApiStage:
+    DependsOn:
+      - ApiGatewayAccount
+      - InferenceApi
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref Deployment
+      MethodSettings:
+        - ResourcePath: /inference
+          HttpMethod: POST
+        - ResourcePath: /inference
+          HttpMethod: OPTIONS
+      RestApiId: !Ref InferenceApi
+      StageName: LATEST
+      
+  Deployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - InferenceRequestPOST
+      - InferenceRequestOPTIONS
+    Properties:
+      RestApiId: !Ref InferenceApi
+      StageName: Production
+
+  InferenceResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref InferenceApi
+      ParentId: !GetAtt InferenceApi.RootResourceId
+      PathPart: inference
+
+  InferenceRequestPOST:
+    DependsOn: 
+      - LambdaPermissionForApiGateway
+      - InferenceApi
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref InferenceResource
+      RestApiId: !Ref InferenceApi
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InferenceFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+
+  InferenceRequestOPTIONS:
+    DependsOn: 
+      - LambdaPermissionForApiGateway
+      - InferenceApi
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InferenceFunction}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+      ResourceId: !Ref InferenceResource
+      RestApiId: !Ref InferenceApi
+      MethodResponses:
+        - StatusCode: 200
+
+  GatewayResponseDefault4XX:
+    DependsOn: InferenceApi
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+         gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+         gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+      ResponseType: DEFAULT_4XX
+      RestApiId:
+        Ref: InferenceApi
+
+  GatewayResponseDefault5XX:
+    DependsOn: InferenceApi
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+         gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+         gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+      ResponseType: DEFAULT_5XX
+      RestApiId:
+        Ref: InferenceApi
+
+# Configure EFS 
+
+  OpenSSH:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to client host
+        VpcId:
+          Ref: VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  EC2Instance: 
+    DependsOn: 
+      - MountTargetPublic
+      - AccessPointResource
+      - FileSystemResource
+      - HostingBucket
+      - InferenceApi
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: lambda-ml
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          DeleteOnTermination: "true"
+          SubnetId: !Ref PublicSubnet
+          GroupSet: 
+            - !GetAtt VPC.DefaultSecurityGroup
+            - !Ref OpenSSH
+      IamInstanceProfile: !Ref InstanceProfile
+      InstanceInitiatedShutdownBehavior: terminate
+      UserData: 
+        Fn::Base64: 
+          !Sub 
+            - |
+              #!/bin/bash
+              sudo yum update -y
+
+              # Download Lambda handler
+              wget https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/lambda_handler/inference.py
+              zip inference.zip inference.py
+              aws s3 cp inference.zip s3://${HostingBucket}
+
+              # Mount file system
+              sudo mkdir -p /mnt/efs/fs1
+              sudo chown ec2-user:ec2-user /mnt/efs/fs1
+              sudo yum install -y amazon-efs-utils
+              sleep 120
+              sudo mount -t efs -o tls ${FileSystemId}:/ /mnt/efs/fs1
+
+              # Install Python 3.6  
+              sudo yum -y groupinstall development
+              sudo yum -y install zlib-devel
+              sudo yum -y install openssl-devel bzip2-devel
+              sudo curl -O https://www.python.org/ftp/python/3.6.8/Python-3.6.8.tgz
+              sudo tar xzvf Python-3.6.8.tgz
+              cd Python-3.6.8
+              sudo ./configure --enable-optimizations
+              sudo make install
+              
+              # Download and install Lambda dependencies
+              sudo mkdir /mnt/efs/fs1/ml
+              sudo chown ec2-user:ec2-user /mnt/efs/fs1/ml
+              wget -P /mnt/efs/fs1/ml/model_data https://tutorial-upload.s3.amazonaws.com/yolov2.h5
+              wget -P /mnt/efs/fs1/ml/model_data https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/model/coco_classes.txt
+              wget -P /mnt/efs/fs1/ml/model_data https://github.com/molly-moon/projects/raw/master/app-object-detection/web-app/model/FiraMono-Medium.otf
+              wget -P /mnt/efs/fs1/ml/model_data https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/model/yolo_anchors.txt
+              python3 -m pip install -t /mnt/efs/fs1/ml/lib keras==2.0 imageio
+              
+              # Update config file
+              find build -type f -exec sed -i 's/REPLACE_REGION/${AWS::Region}/g' {} \;
+              find build -type f -exec sed -i 's/REPLACE_APIID/${InferenceApi}/g' {} \;
+
+              # Send signal to CloudFormation
+              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
+
+              # Terminate instance
+              #sudo shutdown -h now
+
+            - FileSystemId: !Ref FileSystemResource
+              ApiId: !Ref InferenceApi
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: "PT60M"
+
+  EC2Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+
+  InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+
+# Lambda inference function 
+
+  RoleLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: lambdaEfsVpcPermissions
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: [
+                  'logs:CreateLogGroup',
+                  'logs:CreateLogStream',
+                  'logs:PutLogEvents',
+                  'ec2:CreateNetworkInterface',
+                  'ec2:DescribeNetworkInterfaces',
+                  'ec2:DeleteNetworkInterface']
+                Resource: '*'
+              - Effect: Allow
+                Action: [
+                  'elasticfilesystem:ClientMount',
+                  'elasticfilesystem:ClientWrite',
+                  'elasticfilesystem:DescribeMountTargets']
+                Resource: '*'
+
+  InferenceFunction: 
+    DependsOn: 
+      - EC2Instance
+      - MountTargetPrivate
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: !Ref AWS::StackName
+      Runtime: python3.6
+      Handler: inference.handler
+      Role: !GetAtt RoleLambda.Arn
+      Code: 
+        S3Bucket: !Ref HostingBucket
+        S3Key: inference.zip
+      Timeout: 300
+      MemorySize: 3008
+      Environment:
+        Variables:
+          PYTHONPATH: /mnt/inference/lib
+          MODEL_DATA: /mnt/inference/model_data
+      VpcConfig: 
+        SecurityGroupIds: 
+          - !GetAtt VPC.DefaultSecurityGroup
+        SubnetIds: 
+          - !Ref PrivateSubnet
+          - !Ref PublicSubnet
+      FileSystemConfigs:
+        - Arn: !GetAtt AccessPointResource.Arn
+          LocalMountPath: /mnt/inference
+
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt [HostingBucket, WebsiteURL]
+    Description: URL for website hosted on S3
+
+  S3BucketSecureURL:
+    Value: !Join ['', ['https://', !GetAtt [HostingBucket, DomainName]]]
+    Description: Name of S3 bucket to hold website content
+
+  RootUrl:
+    Description: Root URL of the API gateway
+    Value: !Sub 'https://${InferenceApi}.execute-api.${AWS::Region}.amazonaws.com'

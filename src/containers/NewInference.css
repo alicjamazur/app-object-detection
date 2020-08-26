@@ -1,0 +1,70 @@
+@media all and (min-width: 480px) {
+  .NewInference {
+    padding-top: 100px;
+    font-size: 15px;
+    font-family: "Open Sans", sans-serif;
+    font-weight: lighter;
+
+  }
+
+  .NewInference .form-group label{
+    font-weight: normal;
+    font-size: 15px;
+    color: rgb(141, 129, 129);
+  }
+
+  .NewInference form {
+    margin: 0 auto;
+    max-width: 320px;
+    font-size: 12px;
+    font-weight: lighter;
+  }
+
+  .NewInference h4 {
+    margin: 0 auto;
+    padding-top: 30px;
+    font-weight: lighter;
+  }
+
+  .Button form {
+    margin: 0 auto;
+    text-align: center;
+    padding-top: 10px;
+    padding-bottom: 30px;
+  }
+
+  .PostInference {
+    margin: 0 auto;
+    padding: 10px;
+    max-height: 150px;
+  }
+
+  .PostInference h4 {
+    margin: 0 auto;
+    padding-top: 5px;
+    font-size: 15px;
+    font-family: "Open Sans", sans-serif;
+  }
+
+  .PostInference h5 {
+    margin: 0 auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 13px;
+    color: #999;
+    font-family: "Open Sans", sans-serif;
+  }
+
+  .PostInference p {
+    margin: 0 auto;
+    font-size: 13px;
+    padding-top: 10px;
+    font-family: "Open Sans", sans-serif;
+  }
+  .center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 70%;
+  }
+}

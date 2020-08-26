@@ -1,0 +1,23 @@
+.panel {
+    margin-bottom: 20px;
+    margin-top: 20px;
+    background-color: #f5f5f5;
+}
+
+.col1 p {
+    font-size: small;
+    color: rgb(85, 82, 82);
+    font-weight: lighter;
+    margin-left: 20px;
+    margin-top: 40px;
+
+}
+.col1 h4 {
+    color: rgb(43, 42, 42);
+    padding-top: 20px;
+    font-size: small;
+    font-weight: normal;
+
+
+
+}
