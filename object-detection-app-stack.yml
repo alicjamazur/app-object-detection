@@ -183,6 +183,27 @@ Resources:
 
 # S3 bucket for static website hosting
 
+  BucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref HostingBucket
+      PolicyDocument: 
+        Statement: 
+          - 
+            Action: 
+              - "s3:GetObject"
+            Effect: "Allow"
+            Resource: 
+              Fn::Join: 
+                - ""
+                - 
+                  - "arn:aws:s3:::"
+                  - 
+                    !Ref HostingBucket
+                  - "/*"
+            Principal: "*"
+             
+
   HostingBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
@@ -213,6 +234,8 @@ Resources:
             AllowedMethods:
               - GET
               - HEAD
+              - POST
+              - PUT
             MaxAge: 3000
 
 # API Gateway 
@@ -275,7 +298,6 @@ Resources:
   InferenceApiStage:
     DependsOn:
       - ApiGatewayAccount
-      - InferenceApi
     Type: AWS::ApiGateway::Stage
     Properties:
       DeploymentId: !Ref Deployment
@@ -285,7 +307,7 @@ Resources:
         - ResourcePath: /inference
           HttpMethod: OPTIONS
       RestApiId: !Ref InferenceApi
-      StageName: LATEST
+      StageName: Production
       
   Deployment:
     Type: AWS::ApiGateway::Deployment
@@ -306,7 +328,6 @@ Resources:
   InferenceRequestPOST:
     DependsOn: 
       - LambdaPermissionForApiGateway
-      - InferenceApi
     Type: AWS::ApiGateway::Method
     Properties:
       ResourceId: !Ref InferenceResource
@@ -323,24 +344,35 @@ Resources:
   InferenceRequestOPTIONS:
     DependsOn: 
       - LambdaPermissionForApiGateway
-      - InferenceApi
     Type: AWS::ApiGateway::Method
     Properties:
       HttpMethod: OPTIONS
       AuthorizationType: NONE
-      Integration:
-        Type: MOCK
-        IntegrationHttpMethod: POST
-        Uri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InferenceFunction}/invocations'
-        IntegrationResponses:
-          - StatusCode: 200
       ResourceId: !Ref InferenceResource
       RestApiId: !Ref InferenceApi
-      MethodResponses:
+      Integration:
+        IntegrationResponses:
         - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+          ResponseTemplates:
+            application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+      - StatusCode: 200
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
 
   GatewayResponseDefault4XX:
-    DependsOn: InferenceApi
     Type: 'AWS::ApiGateway::GatewayResponse'
     Properties:
       ResponseParameters:
@@ -351,7 +383,6 @@ Resources:
         Ref: InferenceApi
 
   GatewayResponseDefault5XX:
-    DependsOn: InferenceApi
     Type: 'AWS::ApiGateway::GatewayResponse'
     Properties:
       ResponseParameters:
@@ -404,58 +435,55 @@ Resources:
       InstanceInitiatedShutdownBehavior: terminate
       UserData: 
         Fn::Base64: 
-          !Sub 
-            - |
-              #!/bin/bash
-              sudo yum update -y
+          !Sub |
+            #!/bin/bash
+            sudo yum update -y
 
-              # Donwload the repo
-              curl -L -o repo.zip https://github.com/molly-moon/app-object-detection/zipball/master
-              unzip repo.zip 
+            # Donwload the repo
+            curl -L -o repo.zip https://github.com/molly-moon/app-object-detection/zipball/master
+            unzip repo.zip 
+          
+            # Upload Lambda handler to S3
+            aws s3 cp molly*/lambda_handler/inference.zip s3://${HostingBucket}
+
+            # Update env variables
+            find molly*/build/static/js -type f -exec sed -i 's/REPLACE_REGION/${AWS::Region}/g' {} \;
+            find molly*/build/static/js -type f -exec sed -i 's/REPLACE_APIID/${InferenceApi}/g' {} \;
+
+            # Upload website files to S3
+            aws s3 sync molly*/build s3://${HostingBucket}
+
+            # Mount file system
+            sudo mkdir -p /mnt/efs/fs1
+            sudo chown ec2-user:ec2-user /mnt/efs/fs1
+            sudo yum install -y amazon-efs-utils
+            sleep 120
+            sudo mount -t efs -o tls ${FileSystemResource}:/ /mnt/efs/fs1
+
+            # Install Python 3.6  
+            sudo yum -y groupinstall development
+            sudo yum -y install zlib-devel
+            sudo yum -y install openssl-devel bzip2-devel
+            sudo curl -O https://www.python.org/ftp/python/3.6.8/Python-3.6.8.tgz
+            sudo tar xzvf Python-3.6.8.tgz
+            cd Python-3.6.8
+            sudo ./configure --enable-optimizations
+            sudo make install
+            cd ~
             
-              # Upload Lambda handler to S3
-              aws s3 cp molly-moon*/lambda_handler/inference.zip s3://${HostingBucket}
+            # Lambda dependencies setup
+            sudo mkdir /mnt/efs/fs1/ml
+            sudo chown ec2-user:ec2-user /mnt/efs/fs1/ml
+            wget -P /mnt/efs/fs1/ml/model_data https://tutorial-upload.s3.amazonaws.com/yolov2.h5
+            sudo cp /molly*/model/* /mnt/efs/fs1/ml/model_data
+            python3 -m pip install -t /mnt/efs/fs1/ml/lib keras==2.0 imageio
+            
+            # Send signal to CloudFormation
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
 
-              # Mount file system
-              sudo mkdir -p /mnt/efs/fs1
-              sudo chown ec2-user:ec2-user /mnt/efs/fs1
-              sudo yum install -y amazon-efs-utils
-              sleep 120
-              sudo mount -t efs -o tls ${FileSystemId}:/ /mnt/efs/fs1
+            # Terminate instance
+            #sudo shutdown -h now
 
-              # Install Python 3.6  
-              sudo yum -y groupinstall development
-              sudo yum -y install zlib-devel
-              sudo yum -y install openssl-devel bzip2-devel
-              sudo curl -O https://www.python.org/ftp/python/3.6.8/Python-3.6.8.tgz
-              sudo tar xzvf Python-3.6.8.tgz
-              cd Python-3.6.8
-              sudo ./configure --enable-optimizations
-              sudo make install
-              cd ~
-              
-              # Lambda dependencies setup
-              sudo mkdir /mnt/efs/fs1/ml
-              sudo chown ec2-user:ec2-user /mnt/efs/fs1/ml
-              wget -P /mnt/efs/fs1/ml/model_data https://tutorial-upload.s3.amazonaws.com/yolov2.h5
-              cp molly*/model/* /mnt/efs/fs1/ml/model_data
-              python3 -m pip install -t /mnt/efs/fs1/ml/lib keras==2.0 imageio
-              
-              # Update env variables
-              find molly*/build/static/js -type f -exec sed -i 's/REPLACE_REGION/${AWS::Region}/g' {} \;
-              find molly*/build/static/js -type f -exec sed -i 's/REPLACE_APIID/${InferenceApi}/g' {} \;
-
-              # Upload website files to S3
-              aws s3 sync molly*/build s3://${HostingBucket}
-
-              # Send signal to CloudFormation
-              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
-
-              # Terminate instance
-              #sudo shutdown -h now
-
-            - FileSystemId: !Ref FileSystemResource
-              ApiId: !Ref InferenceApi
     CreationPolicy:
       ResourceSignal:
         Count: 1

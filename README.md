@@ -18,7 +18,7 @@ The workflow starts with a user request that is handled by AWS Amplify powered b
 To make predictions Lambda uses deep learning YOLOv2 model. It uses the inference code I wrote when working on one of the assignments of [the Deep Learning Specialization course](https://www.coursera.org/specializations/deep-learning?utm_source=gg&utm_medium=sem&utm_content=17-DeepLearning-LATAM&campaignid=6516520287&adgroupid=77982690923&device=c&keyword=coursera%20artificial%20intelligence&matchtype=b&network=g&devicemodel=&adpostion=&creativeid=383382632097&hide_mobile_promo&gclid=Cj0KCQjw7ZL6BRCmARIsAH6XFDLvpcCIClw5qxJ8XfolByUM5qkxPaj-3t5GQy92JGu16Hi9_aQgQ6waAjMpEALw_wcB).
 
 ### Prerequisites
-In order to launch the app you need to create resources with Amazon Web Services. For that you need an AWS account and optionally AWS CLI set up. Lean more [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
+In order to launch the app you need to create resources with Amazon Web Services. For that you need an AWS account and optionally AWS CLI set up. Learn more [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
 
 ### Launch stack 
 
@@ -44,12 +44,12 @@ Stack creation time is about 30 min.
 <img src="./architecture.png" width=400/>
 </p>
 
-- Basic environment: VPC, public subnet, private subnet, Internet Gateway, NAT Gateway and all necessary attachments and associations
-- S3 bucket for website hosting and for Lambda handler code storage
-- Elastic File System for increased Lambda storage space
-- Lambda function to execute machine learning inference code
-- REST API with API Gateway to serve as a front-door to the application
-- EC2 instance to perform automated configuration tasks: 
+- Basic environment: **VPC**, **public subnet**, **private subnet**, **Internet Gateway**, **NAT Gateway** and all necessary attachments and associations
+- **S3 bucket** for website hosting and for Lambda handler code storage
+- **Elastic File System** for increased Lambda storage space
+- **Lambda function** to execute machine learning inference code
+- **REST API with API Gateway** to serve as a front-door to the application
+- **EC2 instance** to perform automated configuration tasks: 
 	- Download static files to S3 bucket for website hosting
 	- Mount Elastic File System 
     - Download Lambda handler code
@@ -67,4 +67,4 @@ aws cloudformation delete-stack --stack-name object-detection-app
 ### Acknowledgements
 When creating this demo I was inspired by an open-source project [Serverless Stack](https://serverless-stack.com/) by Anomaly Innovations. They created a step-by-step guide to help you build a full-stack serverless application hosted on AWS.
 
-The inference code used to detect object uses [YOLOv2](https://pjreddie.com/darknet/yolov2/), a deep learning model created by Joseph Redmon. The keras implementation of YOLOv2 I use in this project is one of my assignments from [Deep Learning Specialization course](https://www.coursera.org/specializations/deep-learning?utm_source=gg&utm_medium=sem&utm_content=17-DeepLearning-LATAM&campaignid=6516520287&adgroupid=77982690923&device=c&keyword=coursera%20deep%20learning%20ai&matchtype=b&network=g&devicemodel=&adpostion=&creativeid=383382632097&hide_mobile_promo&gclid=CjwKCAjwkJj6BRA-EiwA0ZVPVg2MCerBH5g0Hh03wK0ESxG68Ty0ulraJbtGfk9VcnZs95aaIdgyrRoCLY4QAvD_BwE), created by deeplearning.ai. The course assignment was greatly inspired by [Yet Another Darknet 2 Keras project](https://github.com/allanzelener/YAD2K) by Allan Zelener.
+The inference code used to detect object uses [YOLOv2](https://pjreddie.com/darknet/yolov2/), a deep learning model created by Joseph Redmon. The keras implementation of YOLOv2 I use in this project is one of my assignments from [Deep Learning Specialization course](https://www.coursera.org/specializations/deep-learning?utm_source=gg&utm_medium=sem&utm_content=17-DeepLearning-LATAM&campaignid=6516520287&adgroupid=77982690923&device=c&keyword=coursera%20deep%20learning%20ai&matchtype=b&network=g&devicemodel=&adpostion=&creativeid=383382632097&hide_mobile_promo&gclid=CjwKCAjwkJj6BRA-EiwA0ZVPVg2MCerBH5g0Hh03wK0ESxG68Ty0ulraJbtGfk9VcnZs95aaIdgyrRoCLY4QAvD_BwE) created by deeplearning.ai. The course assignment was greatly inspired by [Yet Another Darknet 2 Keras project](https://github.com/allanzelener/YAD2K) by Allan Zelener.
