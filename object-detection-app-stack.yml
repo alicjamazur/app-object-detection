@@ -307,7 +307,7 @@ Resources:
         - ResourcePath: /inference
           HttpMethod: OPTIONS
       RestApiId: !Ref InferenceApi
-      StageName: Production
+      StageName: LATEST
       
   Deployment:
     Type: AWS::ApiGateway::Deployment
