@@ -36,9 +36,9 @@ export default function Architecture() {
 
     "3": ["API Gateway invokes Lambda function that hosts Python code used to detect objects on input images. \
           The inference code uses ", (<a href="https://pjreddie.com/darknet/yolov2/">YOLOv2</a>), " , a deep learning model created by Joseph Redmon. \
-          The keras implementation of YOLOv2 I use in this project is one of my assignments from", 
-          (<a href="https://www.coursera.org/specializations/deep-learning?utm_source=gg&utm_medium=sem&utm_content=17-DeepLearning-LATAM&campaignid=6516520287&adgroupid=77982690923&device=c&keyword=coursera%20deep%20learning%20ai&matchtype=b&network=g&devicemodel=&adpostion=&creativeid=383382632097&hide_mobile_promo&gclid=CjwKCAjwkJj6BRA-EiwA0ZVPVg2MCerBH5g0Hh03wK0ESxG68Ty0ulraJbtGfk9VcnZs95aaIdgyrRoCLY4QAvD_BwE">Deep Learning Specialization course</a>), " created by deeplearning.ai. \
-          The course assignment was greatly inspired by ", (<a href="https://github.com/allanzelener/YAD2K">Yet Another Darknet 2 Keras project</a>, " by Allan Zelener. \
+          The keras implementation of YOLOv2 I use in this project is one of my assignments from ", 
+          (<a href="https://www.coursera.org/specializations/deep-learning?utm_source=gg&utm_medium=sem&utm_content=17-DeepLearning-LATAM&campaignid=6516520287&adgroupid=77982690923&device=c&keyword=coursera%20deep%20learning%20ai&matchtype=b&network=g&devicemodel=&adpostion=&creativeid=383382632097&hide_mobile_promo&gclid=CjwKCAjwkJj6BRA-EiwA0ZVPVg2MCerBH5g0Hh03wK0ESxG68Ty0ulraJbtGfk9VcnZs95aaIdgyrRoCLY4QAvD_BwE">Deep Learning Specialization course</a>), 
+          " created by deeplearning.ai. The course assignment was greatly inspired by ", (<a href="https://github.com/allanzelener/YAD2K">Yet Another Darknet 2 Keras project</a>), " by Allan Zelener. \
           YOLOv2 detects thousands of potential objects on the input image by specifying bounding box coordinates relative to image dimensions. \
           Thanks to non-max-suppression technique, Lambda outputs only the most probable predictions."],
 
