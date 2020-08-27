@@ -474,7 +474,7 @@ Resources:
             # Lambda dependencies setup
             sudo mkdir /mnt/efs/fs1/ml
             sudo chown ec2-user:ec2-user /mnt/efs/fs1/ml
-            wget -P /mnt/efs/fs1/ml/model_data https://p-def8.pcloud.com/cBZBvy8nBZ0LhEAsZZZqdEW37Z2ZZNFLZkZKJBt4Z6XZ0JZ5pZvkZ2FZh0ZVVZjVZxpZbpZlZgkZvZX0ZVHoXXZjEfOarXSASBTLLlb2TL8U7f2ic6V/yolov2.h5
+            wget -P /mnt/efs/fs1/ml/model_data -o yolo.h5 https://p-def8.pcloud.com/cBZBvy8nBZ0LhEAsZZZqdEW37Z2ZZNFLZkZKJBt4Z6XZ0JZ5pZvkZ2FZh0ZVVZjVZxpZbpZlZgkZvZX0ZVHoXXZjEfOarXSASBTLLlb2TL8U7f2ic6V/yolov2.h5
             sudo cp /molly*/model/* /mnt/efs/fs1/ml/model_data
             python3 -m pip install -t /mnt/efs/fs1/ml/lib keras==2.0 imageio
             
