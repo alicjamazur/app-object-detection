@@ -1,7 +1,10 @@
 
 This project is a demo serverless application that performs object detection on uploaded images.  
 
-![demo-clip](demo-clip.gif)
+<p align=center>
+<img src="demo-clip.gif" height=70% width=70% class="center" alt="demo clip">
+</p>
+
 ### Start here
 
 You can test the app with a click of a button by creating resources with Amazon Web Services. Check for the prerequisites in the following section.
@@ -44,7 +47,10 @@ aws cloudformation create-stack --stack-name object-detection-app --template-bod
 
 Stack creation time is about 30 min.
 
-![launch-clip](launch-clip.gif)
+<p align=center>
+<img src="launch-clip.gif" height=80% width=80% class="center" alt="launch clip">
+</p>
+
 ### Under the hood: what resources are being provisioned
 
 - Basic environment: **VPC**, **public subnet**, **private subnet**, **Internet Gateway**, **NAT Gateway** and all necessary attachments and associations
