@@ -2,7 +2,7 @@
 This project is a demo serverless application that performs object detection on uploaded images.  
 
 <p align=center>
-<img src="demo-clip.gif" height=70% width=70% class="center" alt="demo clip">
+<img src="demo-clip.gif" height=50% width=50% class="center" alt="demo clip">
 </p>
 
 ### Start here
@@ -48,7 +48,7 @@ aws cloudformation create-stack --stack-name object-detection-app --template-bod
 Stack creation time is about 30 min.
 
 <p align=center>
-<img src="launch-clip.gif" height=80% width=80% class="center" alt="launch clip">
+<img src="launch-clip.gif" height=50% width=50% class="center" alt="launch clip">
 </p>
 
 ### Under the hood: what resources are being provisioned
