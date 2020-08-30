@@ -1,11 +1,12 @@
 
 This project is a demo serverless application that performs object detection on uploaded images.  
 
+![demo-clip](demo-clip.gif)
 ### Start here
 
 You can test the app with a click of a button by creating resources with Amazon Web Services. Check for the prerequisites in the following section.
 
-Or you may edit the CloudFormation template to personalize the app as you will and then launch it with AWS. Check out the template [here](https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/object-detection-app-stack.yml).
+Or you may edit the CloudFormation template to personalize the app as you wish and then launch it with AWS. Check out the template [here](https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/object-detection-app-stack.yml).
 
 ### How it works 
 
@@ -43,6 +44,7 @@ aws cloudformation create-stack --stack-name object-detection-app --template-bod
 
 Stack creation time is about 30 min.
 
+![launch-clip](launch-clip.gif)
 ### Under the hood: what resources are being provisioned
 
 - Basic environment: **VPC**, **public subnet**, **private subnet**, **Internet Gateway**, **NAT Gateway** and all necessary attachments and associations
