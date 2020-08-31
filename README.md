@@ -9,7 +9,7 @@ This project is a demo serverless application that performs object detection on 
 
 You can test the app with a click of a button by creating resources with Amazon Web Services. Check for the prerequisites in the following section.
 
-Or you may edit the CloudFormation template to personalize the app as you wish and then launch it with AWS. Check out the template [here](https://raw.githubusercontent.com/molly-moon/projects/master/app-object-detection/web-app/object-detection-app-stack.yml).
+Or you may edit the CloudFormation template to personalize the app as you wish and then launch it with AWS. Check out the template [here](https://raw.githubusercontent.com/molly-moon/app-object-detection/master/object-detection-app-stack.yml).
 
 ### How it works 
 
