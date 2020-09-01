@@ -2,7 +2,7 @@
 This project is a demo serverless application that performs object detection on uploaded images.  
 
 <p align=center>
-<img src="demo-clip.gif" height=50% width=50% class="center" alt="demo clip">
+<img src="images/demo-clip.gif" height=50% width=50% class="center" alt="demo clip">
 </p>
 
 ### Start here
@@ -18,7 +18,7 @@ The app is a single page website that accepts an input image for back-end server
 The front-end was built on top on [Create React App](https://github.com/facebook/create-react-app) open-source project. Both the website and API are hosted on AWS. 
 
 <p align=center>
-<img src="./architecture.png" width=400/>
+<img src="images/architecture.png" width=400/>
 </p>
 
 The workflow starts with a user request that is handled by AWS Amplify powered by API Gateway. API Gateway is integrated with Lambda function that predicts coordinates of bounding boxes and corresponding labels. Due to considerable volume of machine learning libraries and model weights, all dependencies are stored on Amazon Elastic File System associated with the function.
@@ -37,7 +37,7 @@ curl -O https://raw.githubusercontent.com/molly-moon/projects/master/app-object-
 
 To launch the stack via the console, click on the button below. Upload the template file in the *Specify template* section. 
 
-[<img src='./cloudformation-launch-stack.png'>](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=object-detection-app) 
+[<img src='images/cloudformation-launch-stack.png'>](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=object-detection-app) 
 
 You can also launch the stack using AWS CLI. Note you need to substitute YOUR_PATH with your actual downloads folder path.
 
@@ -48,7 +48,7 @@ aws cloudformation create-stack --stack-name object-detection-app --template-bod
 Stack creation time is about 30 min.
 
 <p align=center>
-<img src="launch-clip.gif" height=50% width=50% class="center" alt="launch clip">
+<img src="images/launch-clip.gif" height=50% width=50% class="center" alt="launch clip">
 </p>
 
 ### Under the hood: what resources are being provisioned
