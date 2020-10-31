@@ -72,7 +72,7 @@ Almost all resources necessary to run the app are eligible for the AWS free tier
 
 ### Clean up
 
-Don't forget to delete your resources, when not in use. 
+Don't forget to delete your resources:
 
 - From the console: select the stack to be deleted and then click **Delete** button 
 - Using AWS CLI: run the command
