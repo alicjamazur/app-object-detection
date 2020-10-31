@@ -66,7 +66,14 @@ Stack creation time is about 30 min.
 
 	The instance will self-terminate right after the setup is completed.
 
+### What about the costs?
+
+Almost all resources necessary to run the app are eligible for the AWS free tier. This excludes EC2 t2.large instance used for EFS configuration and NAT Gateway I used for secure Lambda and EFS access. For North Virginia region the instance price is $0.0928/hour and NAT Gateway $0.045/GB-hour. Considering we use the EC2 instance only for the initial setup that should not take more than 15 min, the overall cost of running the app should not exceed $0.14 for the first hour and $0.045 for each additional hour.
+
 ### Clean up
+
+Don't forget to delete your resources, when not in use. 
+
 - From the console: select the stack to be deleted and then click **Delete** button 
 - Using AWS CLI: run the command
 ````
@@ -74,6 +81,7 @@ aws cloudformation delete-stack --stack-name object-detection-app
 ````
 
 ### Acknowledgements
+
 When creating this demo I was inspired by an open-source project [Serverless Stack](https://serverless-stack.com/) by Anomaly Innovations. They created a step-by-step guide to help you build a full-stack serverless application hosted on AWS.
 
 The inference code used to detect object uses [YOLOv2](https://pjreddie.com/darknet/yolov2/), a deep learning model created by Joseph Redmon. The keras implementation of YOLOv2 I use in this project is one of my assignments from [Deep Learning Specialization course](https://www.coursera.org/specializations/deep-learning?utm_source=gg&utm_medium=sem&utm_content=17-DeepLearning-LATAM&campaignid=6516520287&adgroupid=77982690923&device=c&keyword=coursera%20deep%20learning%20ai&matchtype=b&network=g&devicemodel=&adpostion=&creativeid=383382632097&hide_mobile_promo&gclid=CjwKCAjwkJj6BRA-EiwA0ZVPVg2MCerBH5g0Hh03wK0ESxG68Ty0ulraJbtGfk9VcnZs95aaIdgyrRoCLY4QAvD_BwE) created by deeplearning.ai. The course assignment was greatly inspired by [Yet Another Darknet 2 Keras project](https://github.com/allanzelener/YAD2K) by Allan Zelener.
